@@ -1,0 +1,1 @@
+layout(triangles) in vec4 inputData[]; layout(triangle_strip, max_vertices = 6) out vec4 outputData; in vec4 v_color[]; void main() { EmitVertex(); EmitVertex(); EmitVertex(); EndPrimitive(); EmitVertex(); EmitVertex(); EmitVertex(); EndPrimitive(); }

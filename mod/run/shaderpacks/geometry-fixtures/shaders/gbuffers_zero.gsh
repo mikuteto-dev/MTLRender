@@ -1,0 +1,1 @@
+layout(triangles) in; layout(triangle_strip, max_vertices = 8) out; layout(rgba32f, binding = 0) uniform image2D fixtureImage; layout(std430, binding = 1) buffer FixtureData { uint writes; }; void main() { uint id = uint(gl_PrimitiveIDIn); gl_Layer = int(id); imageStore(fixtureImage, ivec2(id, 1), vec4(0.0)); atomicAdd(writes, 1u); }

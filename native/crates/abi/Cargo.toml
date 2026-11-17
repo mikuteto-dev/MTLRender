@@ -1,0 +1,22 @@
+[package]
+name = "mtlrender"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+glslc.workspace = true
+lod.workspace = true
+dispatch2.workspace = true
+gpu.workspace = true
+mesher.workspace = true
+objc2.workspace = true
+objc2-app-kit.workspace = true
+objc2-foundation.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,158 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = 'mtlrender'
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+	useJUnitPlatform()
+	maxHeapSize = '3G'
+	systemProperty 'java.awt.headless', 'true'
+	jvmArgs '--enable-native-access=ALL-UNNAMED', '-Dapple.awt.UIElement=true'
+}
+
+def nativeDir = layout.projectDirectory.dir('../native')
+def nativeLib = nativeDir.file('target/release/libmtlrender.dylib')
+
+def buildNative = tasks.register('buildNative', Exec) {
+	workingDir nativeDir
+	commandLine 'cargo', 'build', '--release'
+	inputs.dir(nativeDir.dir('crates'))
+	inputs.file(nativeDir.file('Cargo.toml'))
+	outputs.file(nativeLib)
+	def needed = gradle.startParameter.taskNames.any { name -> ['runClient', 'jar', 'remapJar', 'build', 'processResources', 'test'].any { name == it || name.endsWith(':' + it) } }
+	onlyIf { needed }
+}
+
+processResources {
+	dependsOn buildNative
+	from(nativeLib) {
+		into 'natives'
+	}
+	def version = project.version
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+def mtlrProperty = { String name, String fallback ->
+	providers.gradleProperty(name).orElse(System.getProperty(name, fallback)).get()
+}
+
+def mtlrTokens = { String value ->
+	def tokens = []
+	def token = new StringBuilder()
+	char quote = 0
+	value.each { character ->
+		if (quote != 0) {
+			if (character == quote) {
+				quote = 0
+			} else {
+				token.append(character)
+			}
+		} else if (character == '\'' || character == '"') {
+			quote = character
+		} else if (character.length() == 1 && Character.isWhitespace(character.charAt(0))) {
+			if (token.length() > 0) {
+				tokens << token.toString()
+				token.setLength(0)
+			}
+		} else {
+			token.append(character)
+		}
+	}
+	if (quote != 0) {
+		throw new GradleException('Unclosed quote in mtlrJvmArgs or mtlrHeap')
+	}
+	if (token.length() > 0) {
+		tokens << token.toString()
+	}
+	tokens
+}
+
+def mtlrHasOption = { List<String> args, String prefix -> args.any { it ==~ /${java.util.regex.Pattern.quote(prefix)}.*/ } }
+
+def mtlrJvmArguments = { String rawJvm, String rawHeap, boolean compactHeaders ->
+	def user = mtlrTokens(rawJvm)
+	def heap = mtlrTokens(rawHeap)
+	def arguments = []
+	if (!mtlrHasOption(user, '-XX:+UseZGC') && !mtlrHasOption(user, '-XX:-UseZGC')) {
+		arguments << '-XX:+UseZGC'
+	}
+	if (compactHeaders && !mtlrHasOption(user, '-XX:+UseCompactObjectHeaders') && !mtlrHasOption(user, '-XX:-UseCompactObjectHeaders')) {
+		arguments << '-XX:+UseCompactObjectHeaders'
+	}
+	['-Xms', '-Xmx'].each { prefix ->
+		if (!mtlrHasOption(user, prefix)) {
+			def configured = heap.find { it.startsWith(prefix) }
+			if (configured != null) {
+				arguments << configured
+			}
+		}
+	}
+	arguments + user
+}
+
+def configuredJvmArguments = mtlrJvmArguments(
+	mtlrProperty('mtlrJvmArgs', ''),
+	mtlrProperty('mtlrHeap', '-Xms2G -Xmx4G'),
+	mtlrProperty('mtlrCompactHeaders', 'true').toBoolean())
+def configuredCompactHeaders = mtlrProperty('mtlrCompactHeaders', 'true').toBoolean()
+def validationOverride = mtlrJvmArguments('-Xms1G -Xmx4G', '-Xms2G -Xmx4G', true)
+
+tasks.register('validateJvmArguments') {
+	doLast {
+		def defaults = configuredJvmArguments
+		def compactCount = defaults.count { it == '-XX:+UseCompactObjectHeaders' }
+		if (defaults.count { it == '-XX:+UseZGC' } != 1 || compactCount != (configuredCompactHeaders ? 1 : 0)) {
+			throw new GradleException('JVM policy defaults are not unique')
+		}
+		if (mtlrTokens('-Xms1G -Xmx4G').any { value -> defaults.count { it.startsWith(value.substring(0, 4)) } > 1 }) {
+			throw new GradleException('JVM heap flags are duplicated')
+		}
+		if (!configuredCompactHeaders && defaults.contains('-XX:+UseCompactObjectHeaders')) {
+			throw new GradleException('Compact headers opt-out was ignored')
+		}
+		if (defaults.any { it.startsWith('-Dmtlrender.debug.memory') }) {
+			throw new GradleException('Memory diagnostics must remain independent of JVM policy')
+		}
+		if (validationOverride.count { it.startsWith('-Xms') } != 1 || validationOverride.count { it.startsWith('-Xmx') } != 1 || validationOverride[-2..-1] != ['-Xms1G', '-Xmx4G']) {
+			throw new GradleException('User heap flags did not retain precedence and order')
+		}
+	}
+}
+
+tasks.matching { it.name == 'check' }.configureEach {
+	dependsOn 'validateJvmArguments'
+}
+
+loom {
+	runs {
+		client {
+			vmArg '--enable-native-access=ALL-UNNAMED'
+			configuredJvmArguments.each { vmArg it }
+		}
+	}
+}

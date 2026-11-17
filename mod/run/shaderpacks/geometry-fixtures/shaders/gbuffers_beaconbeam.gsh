@@ -1,0 +1,1 @@
+layout(triangles) in vec4 inputData[]; layout(triangle_strip, max_vertices = 3) out vec4 outputData; layout(rgba32f, binding = 0) uniform image2D fixtureImage; void main() { imageStore(fixtureImage, ivec2(0, 0), vec4(0.0)); EmitVertex(); EmitVertex(); EmitVertex(); EndPrimitive(); }

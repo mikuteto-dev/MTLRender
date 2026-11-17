@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+command_path=${MTLRENDER_GAME_MODE_COMMAND-}
+if [ -z "$command_path" ]; then
+	home=${HOME-}
+	config=${MTLRENDER_GAME_MODE_CONFIG:-$home/Library/Application Support/MTLRender/game-mode-command}
+	if [ -f "$config" ]; then
+		IFS= read -r command_path < "$config" || true
+	fi
+fi
+if [ -z "$command_path" ]; then
+	echo "configure MTLRENDER_GAME_MODE_COMMAND or the per-user game-mode-command file" >&2
+	exit 64
+fi
+case "$command_path" in
+	/*) ;;
+	*)
+		echo "MTLRENDER_GAME_MODE_COMMAND must be an absolute executable path" >&2
+		exit 64
+	;;
+esac
+if [ ! -x "$command_path" ]; then
+	echo "MTLRENDER_GAME_MODE_COMMAND is not executable: $command_path" >&2
+	exit 126
+fi
+
+"$command_path" "$@" &
+child=$!
+forward_hup() {
+	kill -HUP "$child" 2>/dev/null || true
+}
+forward_int() {
+	kill -INT "$child" 2>/dev/null || true
+}
+forward_term() {
+	kill -TERM "$child" 2>/dev/null || true
+}
+trap forward_hup HUP
+trap forward_int INT
+trap forward_term TERM
+status=0
+wait "$child" || status=$?
+trap - HUP INT TERM
+exit "$status"

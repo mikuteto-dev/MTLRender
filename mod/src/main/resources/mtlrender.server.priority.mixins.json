@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "dev.mikuteto.mtlrender.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ServerChunkCachePriorityMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,0 +1,51 @@
+[workspace]
+resolver = "3"
+members = ["crates/abi", "crates/benchcmp", "crates/glslc", "crates/gpu", "crates/lod", "crates/mesher", "crates/mtl4", "crates/mtl4-sys"]
+
+[workspace.package]
+edition = "2024"
+license = "GPL-3.0-only"
+
+[workspace.dependencies]
+objc2 = "0.6.5"
+block2 = "0.6.2"
+dispatch2 = { version = "0.3.1", features = ["std"] }
+objc2-foundation = "0.3.2"
+objc2-metal = "0.3.2"
+objc2-metal-fx = "0.3.2"
+objc2-quartz-core = { version = "0.3.2", features = ["objc2-metal"] }
+objc2-app-kit = { version = "0.3.2", features = ["objc2-quartz-core"] }
+gpu = { path = "crates/gpu" }
+mesher = { path = "crates/mesher" }
+lod = { path = "crates/lod" }
+mtl4 = { path = "crates/mtl4" }
+mtl4-sys = { path = "crates/mtl4-sys" }
+glslc = { path = "crates/glslc" }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unused_must_use = "deny"
+unused = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+redundant_clone = "deny"
+clone_on_ref_ptr = "deny"
+implicit_clone = "deny"
+multiple_unsafe_ops_per_block = "deny"
+disallowed_types = "deny"
+mem_forget = "deny"
+as_ptr_cast_mut = "deny"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+debug = "line-tables-only"

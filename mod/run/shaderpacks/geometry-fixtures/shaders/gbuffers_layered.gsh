@@ -1,0 +1,1 @@
+layout(triangles, invocations = 3) in vec4 inputData[]; layout(triangle_strip, max_vertices = 3) out vec4 outputData; void main() { gl_Layer = gl_InvocationID + 1; EmitVertex(); EmitVertex(); EmitVertex(); EndPrimitive(); }

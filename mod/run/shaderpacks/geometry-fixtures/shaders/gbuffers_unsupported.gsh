@@ -1,0 +1,1 @@
+layout(triangles) in; layout(triangle_strip, max_vertices = 3) out vec4 outputData; layout(std430, binding = 1) buffer uint writes; void main() { atomicAdd(writes, 1u); EmitVertex(); EndPrimitive(); }

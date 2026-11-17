@@ -1,0 +1,8 @@
+disallowed-types = [
+  { path = "std::rc::Rc", reason = "single owner per resource; no shared mutable state" },
+  { path = "std::cell::RefCell", reason = "use ownership and split borrows" },
+  { path = "std::cell::Cell", reason = "use ownership and split borrows" },
+  { path = "std::sync::Mutex", reason = "render-thread ownership; no shared mutable state" },
+  { path = "std::sync::RwLock", reason = "render-thread ownership; no shared mutable state" },
+  { path = "std::sync::Arc", reason = "single owner per resource" },
+]

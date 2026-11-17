@@ -1,0 +1,1 @@
+layout(triangles) in vec4 inputData[]; layout(triangle_strip, max_vertices = 257) out vec4 outputData; void main() { uint id = uint(gl_PrimitiveIDIn); if (id == id) { EmitVertex(); EmitVertex(); EmitVertex(); EndPrimitive(); } }

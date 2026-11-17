@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "mtlrender",
+	"version": "${version}",
+	"name": "MTLRender",
+	"description": "Metal 4 renderer for Apple silicon Macs.",
+	"license": "GPL-3.0-only",
+	"environment": "client",
+	"mixins": [
+		"mtlrender.mixins.json",
+		"mtlrender.parallel.mixins.json",
+		"mtlrender.server.io.mixins.json",
+		"mtlrender.server.decode.mixins.json",
+		"mtlrender.server.priority.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25"
+	},
+	"breaks": {
+		"sodium": "*",
+		"iris": "*",
+		"distanthorizons": "*"
+	}
+}
